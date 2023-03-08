@@ -1,7 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
-from torch.utils.data import DataLoader
 from datasets import load_dataset
 import evaluate as evaluate
 from transformers import get_scheduler
@@ -17,11 +16,20 @@ def print_gpu_memory():
     """
     # check if gpu is available
     if torch.cuda.is_available():
-        print("torch.cuda.memory_allocated: %fGB" % (torch.cuda.memory_allocated(0) / 1024 / 1024 / 1024))
-        print("torch.cuda.memory_reserved: %fGB" % (torch.cuda.memory_reserved(0) / 1024 / 1024 / 1024))
-        print("torch.cuda.max_memory_reserved: %fGB" % (torch.cuda.max_memory_reserved(0) / 1024 / 1024 / 1024))
+        print(
+            "torch.cuda.memory_allocated: %fGB"
+            % (torch.cuda.memory_allocated(0) / 1024 / 1024 / 1024)
+        )
+        print(
+            "torch.cuda.memory_reserved: %fGB"
+            % (torch.cuda.memory_reserved(0) / 1024 / 1024 / 1024)
+        )
+        print(
+            "torch.cuda.max_memory_reserved: %fGB"
+            % (torch.cuda.max_memory_reserved(0) / 1024 / 1024 / 1024)
+        )
 
-        p = subprocess.check_output('nvidia-smi')
+        p = subprocess.check_output("nvidia-smi")
         print(p.decode("utf-8"))
 
 
@@ -64,45 +72,49 @@ class BoolQADataset(torch.utils.data.Dataset):
             return_attention_mask=True,
             return_tensors="pt",
             padding="max_length",
-            truncation=True
+            truncation=True,
         )
 
         return {
-            'input_ids': encoded_review['input_ids'][0],  # we only have one example in the batch
-            'attention_mask': encoded_review['attention_mask'][0],
+            "input_ids": encoded_review["input_ids"][
+                0
+            ],  # we only have one example in the batch
+            "attention_mask": encoded_review["attention_mask"][0],
             # attention mask tells the model where tokens are padding
-            'labels': torch.tensor(answer, dtype=torch.long)  # labels are the answers (yes/no)
+            "labels": torch.tensor(
+                answer, dtype=torch.long
+            ),  # labels are the answers (yes/no)
         }
 
 
 def evaluate_model(model, dataloader, device):
-    """ Evaluate a PyTorch Model
+    """Evaluate a PyTorch Model
     :param torch.nn.Module model: the model to be evaluated
     :param torch.utils.data.DataLoader test_dataloader: DataLoader containing testing examples
     :param torch.device device: the device that we'll be training on
     :return accuracy
     """
     # load metrics
-    dev_accuracy = evaluate.load('accuracy')
+    dev_accuracy = evaluate.load("accuracy")
 
     # turn model into evaluation mode
     model.eval()
 
     for batch in dataloader:
-        input_ids = batch['input_ids'].to(device)
-        attention_mask = batch['attention_mask'].to(device)
+        input_ids = batch["input_ids"].to(device)
+        attention_mask = batch["attention_mask"].to(device)
         output = model(input_ids=input_ids, attention_mask=attention_mask)
 
         predictions = output.logits
         predictions = torch.argmax(predictions, dim=1)
-        dev_accuracy.add_batch(predictions=predictions, references=batch['labels'])
+        dev_accuracy.add_batch(predictions=predictions, references=batch["labels"])
 
     # compute and return metrics
     return dev_accuracy.compute()
 
 
 def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, lr):
-    """ Train a PyTorch Module
+    """Train a PyTorch Module
 
     :param torch.nn.Module mymodel: the model to be trained
     :param int num_epochs: number of epochs to train for
@@ -123,28 +135,26 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
         "linear",
         optimizer=optimizer,
         num_warmup_steps=50,
-        num_training_steps=len(train_dataloader) * num_epochs
+        num_training_steps=len(train_dataloader) * num_epochs,
     )
 
     loss = torch.nn.CrossEntropyLoss()
 
     for epoch in range(num_epochs):
-
         # put the model in training mode (important that this is done each epoch,
         # since we put the model into eval mode during validation)
         mymodel.train()
 
         # load metrics
-        train_accuracy = evaluate.load('accuracy')
+        train_accuracy = evaluate.load("accuracy")
 
         print(f"Epoch {epoch + 1} training:")
 
         for i, batch in enumerate(train_dataloader):
-
             """
             You need to make some changes here to make this function work.
-            Specifically, you need to: 
-            Extract the input_ids, attention_mask, and labels from the batch; then send them to the device. 
+            Specifically, you need to:
+            Extract the input_ids, attention_mask, and labels from the batch; then send them to the device.
             Then, pass the input_ids and attention_mask to the model to get the logits.
             Then, compute the loss using the logits and the labels.
             Then, call loss.backward() to compute the gradients.
@@ -166,7 +176,9 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
             predictions = torch.argmax(predictions, dim=1)
 
             # update metrics
-            train_accuracy.add_batch(predictions=predictions, references=batch['labels'])
+            train_accuracy.add_batch(
+                predictions=predictions, references=batch["labels"]
+            )
 
         # print evaluation metrics
         print(f" ===> Epoch {epoch + 1}")
@@ -186,15 +198,15 @@ def pre_process(model_name, batch_size, device, small_subset=False):
     print("Slicing the data...")
     if small_subset:
         # use this tiny subset for debugging the implementation
-        dataset_train_subset = dataset['train'][:10]
-        dataset_dev_subset = dataset['train'][:10]
-        dataset_test_subset = dataset['train'][:10]
+        dataset_train_subset = dataset["train"][:10]
+        dataset_dev_subset = dataset["train"][:10]
+        dataset_test_subset = dataset["train"][:10]
     else:
         # since the dataset does not come with any validation data,
         # split the training data into "train" and "dev"
-        dataset_train_subset = dataset['train'][:8000]
-        dataset_dev_subset = dataset['validation']
-        dataset_test_subset = dataset['train'][8000:]
+        dataset_train_subset = dataset["train"][:8000]
+        dataset_dev_subset = dataset["validation"]
+        dataset_test_subset = dataset["train"][8000:]
 
     # maximum length of the input; any input longer than this will be truncated
     # we had to do some pre-processing on the data to figure what is the length of most instances in the dataset
@@ -205,25 +217,25 @@ def pre_process(model_name, batch_size, device, small_subset=False):
 
     print("Loding the data into DS...")
     train_dataset = BoolQADataset(
-        passages=list(dataset_train_subset['passage']),
-        questions=list(dataset_train_subset['question']),
-        answers=list(dataset_train_subset['answer']),
+        passages=list(dataset_train_subset["passage"]),
+        questions=list(dataset_train_subset["question"]),
+        answers=list(dataset_train_subset["answer"]),
         tokenizer=mytokenizer,
-        max_len=max_len
+        max_len=max_len,
     )
     validation_dataset = BoolQADataset(
-        passages=list(dataset_dev_subset['passage']),
-        questions=list(dataset_dev_subset['question']),
-        answers=list(dataset_dev_subset['answer']),
+        passages=list(dataset_dev_subset["passage"]),
+        questions=list(dataset_dev_subset["question"]),
+        answers=list(dataset_dev_subset["answer"]),
         tokenizer=mytokenizer,
-        max_len=max_len
+        max_len=max_len,
     )
     test_dataset = BoolQADataset(
-        passages=list(dataset_test_subset['passage']),
-        questions=list(dataset_test_subset['question']),
-        answers=list(dataset_test_subset['answer']),
+        passages=list(dataset_test_subset["passage"]),
+        questions=list(dataset_test_subset["question"]),
+        answers=list(dataset_test_subset["answer"]),
         tokenizer=mytokenizer,
-        max_len=max_len
+        max_len=max_len,
     )
 
     print(" >>>>>>>> Initializing the data loaders ... ")
@@ -233,7 +245,9 @@ def pre_process(model_name, batch_size, device, small_subset=False):
 
     # from Hugging Face (transformers), read their documentation to do this.
     print("Loading the model ...")
-    pretrained_model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
+    pretrained_model = AutoModelForSequenceClassification.from_pretrained(
+        model_name, num_labels=2
+    )
 
     print("Moving model to device ..." + str(device))
     pretrained_model.to(device)
@@ -255,10 +269,12 @@ if __name__ == "__main__":
     print(f"Specified arguments: {args}")
 
     # load the data and models
-    pretrained_model, train_dataloader, validation_dataloader, test_dataloader = pre_process(args.model,
-                                                                                             args.batch_size,
-                                                                                             args.device,
-                                                                                             args.small_subset)
+    (
+        pretrained_model,
+        train_dataloader,
+        validation_dataloader,
+        test_dataloader,
+    ) = pre_process(args.model, args.batch_size, args.device, args.small_subset)
 
     print(" >>>>>>>>  Starting training ... ")
     train(...)
