@@ -7,6 +7,7 @@ from transformers import get_scheduler
 from transformers import AutoModelForSequenceClassification
 import argparse
 import subprocess
+import matplotlib.pyplot as plt
 
 
 def print_gpu_memory():
@@ -140,6 +141,8 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
 
     loss = torch.nn.CrossEntropyLoss()
 
+    train_accs = []
+
     for epoch in range(num_epochs):
         # put the model in training mode (important that this is done each epoch,
         # since we put the model into eval mode during validation)
@@ -149,6 +152,8 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
         train_accuracy = evaluate.load("accuracy")
 
         print(f"Epoch {epoch + 1} training:")
+
+        correct = 0
 
         for i, batch in enumerate(train_dataloader):
             """
@@ -164,16 +169,21 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
             Then, compute the accuracy using the logits and the labels.
             """
 
-            input_ids = ...
-            attention_mask = ...
+            input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
 
-            output = mymodel(...)
-            predictions = ...
-            model_loss = loss(...)
+            output = mymodel(input_ids=input_ids, attention_mask=attention_mask)
+            predictions = output.logits
+            model_loss = loss(predictions, batch["labels"])
 
-            ...
+            model_loss.backward()
+            optimizer.step()
+            lr_scheduler.step()
+            optimizer.zero_grad()
 
             predictions = torch.argmax(predictions, dim=1)
+
+            correct += (predictions == batch["labels"]).sum().item()
 
             # update metrics
             train_accuracy.add_batch(
@@ -187,6 +197,10 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
         # normally, validation would be more useful when training for many epochs
         val_accuracy = evaluate_model(mymodel, validation_dataloader, device)
         print(f" - Average validation metrics: accuracy={val_accuracy}")
+
+        train_accs.append(correct / len(train_dataloader.dataset))
+
+    return train_accs
 
 
 def pre_process(model_name, batch_size, device, small_subset=False):
@@ -277,13 +291,26 @@ if __name__ == "__main__":
     ) = pre_process(args.model, args.batch_size, args.device, args.small_subset)
 
     print(" >>>>>>>>  Starting training ... ")
-    train(...)
+    train_accs = train(
+        pretrained_model,
+        args.num_epochs,
+        train_dataloader,
+        validation_dataloader,
+        args.device,
+        args.lr,
+    )
 
     # print the GPU memory usage just to make sure things are alright
     print_gpu_memory()
 
-    val_accuracy = ...
+    val_accuracy = evaluate_model(pretrained_model, validation_dataloader, args.device)
     print(f" - Average DEV metrics: accuracy={val_accuracy}")
 
-    test_accuracy = ...
+    test_accuracy = evaluate_model(pretrained_model, test_dataloader, args.device)
     print(f" - Average TEST metrics: accuracy={test_accuracy}")
+
+    # plot of training accuracy as a function of training epochs
+    plt.plot(train_accs)
+    clf = plt.gcf()
+    clf.savefig("figures/three_two.png")
+    plt.show()
