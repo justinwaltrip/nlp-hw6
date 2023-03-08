@@ -173,7 +173,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
             attention_mask = batch["attention_mask"].to(device)
 
             output = mymodel(input_ids=input_ids, attention_mask=attention_mask)
-            predictions = output.logits
+            predictions = output.logits.cpu()
             model_loss = loss(predictions, batch["labels"])
 
             model_loss.backward()
@@ -278,6 +278,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--model", type=str, default="distilbert-base-uncased")
+    parser.add_argument("--save_path", type=str, default="out.png")
 
     args = parser.parse_args()
     print(f"Specified arguments: {args}")
@@ -312,5 +313,5 @@ if __name__ == "__main__":
     # plot of training accuracy as a function of training epochs
     plt.plot(train_accs)
     clf = plt.gcf()
-    clf.savefig("figures/three_two.png")
+    clf.savefig(f"figures/{args.save_path}")
     plt.show()
