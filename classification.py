@@ -142,6 +142,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
     loss = torch.nn.CrossEntropyLoss()
 
     train_accs = []
+    dev_accs = []
 
     for epoch in range(num_epochs):
         # put the model in training mode (important that this is done each epoch,
@@ -199,8 +200,9 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
         print(f" - Average validation metrics: accuracy={val_accuracy}")
 
         train_accs.append(correct / len(train_dataloader.dataset))
+        dev_accs.append(val_accuracy)
 
-    return train_accs
+    return train_accs, dev_accs
 
 
 def pre_process(model_name, batch_size, device, small_subset=False):
@@ -278,7 +280,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--model", type=str, default="distilbert-base-uncased")
-    parser.add_argument("--save_path", type=str, default="out.png")
+    parser.add_argument("--save_path_train", type=str, default="out_train.png")
+    parser.add_argument("--save_path_dev", type=str, default="out_dev.png")
 
     args = parser.parse_args()
     print(f"Specified arguments: {args}")
@@ -292,7 +295,7 @@ if __name__ == "__main__":
     ) = pre_process(args.model, args.batch_size, args.device, args.small_subset)
 
     print(" >>>>>>>>  Starting training ... ")
-    train_accs = train(
+    train_accs, dev_accs = train(
         pretrained_model,
         args.num_epochs,
         train_dataloader,
@@ -313,5 +316,11 @@ if __name__ == "__main__":
     # plot of training accuracy as a function of training epochs
     plt.plot(train_accs)
     clf = plt.gcf()
-    clf.savefig(f"figures/{args.save_path}")
+    clf.savefig(f"figures/{args.save_path_train}")
+    plt.show()
+
+    # plot of dev accuracy as a function of training epochs
+    plt.plot(dev_accs)
+    clf = plt.gcf()
+    clf.savefig(f"figures/{args.save_path_dev}")
     plt.show()
