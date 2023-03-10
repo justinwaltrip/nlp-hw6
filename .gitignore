@@ -1,3 +1,4 @@
 /.env
 /.vscode
 slurm*
+/best_model

@@ -286,23 +286,53 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(f"Specified arguments: {args}")
 
-    # load the data and models
-    (
-        pretrained_model,
-        train_dataloader,
-        validation_dataloader,
-        test_dataloader,
-    ) = pre_process(args.model, args.batch_size, args.device, args.small_subset)
+    best_params = {}
+    best_dev_acc = 0
 
-    print(" >>>>>>>>  Starting training ... ")
-    train_accs, dev_accs = train(
-        pretrained_model,
-        args.num_epochs,
-        train_dataloader,
-        validation_dataloader,
-        args.device,
-        args.lr,
-    )
+    lrs = [1e-4, 5e-4, 1e-3]
+    epochs = [5, 7, 9]
+
+    validation_dataloader = None
+    test_dataloader = None
+
+    for lr in lrs:
+        for epoch in epochs:
+            # load the data and models
+            (
+                pretrained_model,
+                train_dataloader,
+                validation_dataloader,
+                test_dataloader,
+            ) = pre_process(args.model, args.batch_size, args.device, args.small_subset)
+
+            print(" >>>>>>>>  Starting training ... ")
+            train_accs, dev_accs = train(
+                pretrained_model,
+                epoch,
+                train_dataloader,
+                validation_dataloader,
+                args.device,
+                lr,
+            )
+
+            dev_acc = dev_accs[-1]
+
+            if dev_acc > best_dev_acc:
+                best_dev_acc = dev_acc
+                best_params["lr"] = lr
+                best_params["epoch"] = epoch
+
+                # save best model
+                pretrained_model.save_pretrained("best_model")
+    
+    # print best params
+    print(f"Best params: {best_params}")
+
+    # load best model
+    pretrained_model = AutoModelForSequenceClassification.from_pretrained("best_model")
+
+    # send model to device
+    pretrained_model.to(args.device)
 
     # print the GPU memory usage just to make sure things are alright
     print_gpu_memory()
@@ -313,15 +343,15 @@ if __name__ == "__main__":
     test_accuracy = evaluate_model(pretrained_model, test_dataloader, args.device)
     print(f" - Average TEST metrics: accuracy={test_accuracy}")
 
-    # plot of training accuracy as a function of training epochs
-    plt.plot(train_accs)
-    clf = plt.gcf()
-    clf.savefig(f"figures/{args.save_path_train}")
+    # # plot of training accuracy as a function of training epochs
+    # plt.plot(train_accs)
+    # clf = plt.gcf()
+    # clf.savefig(f"figures/{args.save_path_train}")
 
-    # clear the plot
-    plt.clf()
+    # # clear the plot
+    # plt.clf()
 
-    # plot of dev accuracy as a function of training epochs
-    plt.plot(dev_accs)
-    clf = plt.gcf()
-    clf.savefig(f"figures/{args.save_path_dev}")
+    # # plot of dev accuracy as a function of training epochs
+    # plt.plot(dev_accs)
+    # clf = plt.gcf()
+    # clf.savefig(f"figures/{args.save_path_dev}")

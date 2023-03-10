@@ -21,4 +21,4 @@ pip install -r requirements.txt # install Python dependencies
 pip install typing-extensions --upgrade
 
 # runs your code
-srun python classification.py --experiment "all_data" --device cuda --model "distilbert-base-uncased" --batch_size "64" --lr 1e-4 --num_epochs 30 --save_path_train three_six_train.png --save_path_dev three_six_dev.png 
+srun python classification.py --experiment "grid_search" --device cuda --model "distilbert-base-uncased" --batch_size "64" 
