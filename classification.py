@@ -200,7 +200,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
         print(f" - Average validation metrics: accuracy={val_accuracy}")
 
         train_accs.append(correct / len(train_dataloader.dataset))
-        dev_accs.append(val_accuracy)
+        dev_accs.append(val_accuracy["accuracy"])
 
     return train_accs, dev_accs
 
@@ -317,10 +317,11 @@ if __name__ == "__main__":
     plt.plot(train_accs)
     clf = plt.gcf()
     clf.savefig(f"figures/{args.save_path_train}")
-    plt.show()
+
+    # clear the plot
+    plt.clf()
 
     # plot of dev accuracy as a function of training epochs
     plt.plot(dev_accs)
     clf = plt.gcf()
     clf.savefig(f"figures/{args.save_path_dev}")
-    plt.show()
