@@ -8,6 +8,7 @@ from transformers import AutoModelForSequenceClassification
 import argparse
 import subprocess
 import matplotlib.pyplot as plt
+import gc
 
 
 def print_gpu_memory():
@@ -270,33 +271,27 @@ def pre_process(model_name, batch_size, device, small_subset=False):
     return pretrained_model, train_dataloader, validation_dataloader, test_dataloader
 
 
-# the entry point of the program
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--experiment", type=str, default=None)
-    parser.add_argument("--small_subset", type=bool, default=False)
-    parser.add_argument("--num_epochs", type=int, default=1)
-    parser.add_argument("--lr", type=float, default=5e-5)
-    parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--model", type=str, default="distilbert-base-uncased")
-    parser.add_argument("--save_path_train", type=str, default="out_train.png")
-    parser.add_argument("--save_path_dev", type=str, default="out_dev.png")
-
-    args = parser.parse_args()
-    print(f"Specified arguments: {args}")
-
+def main(args):
     best_params = {}
     best_dev_acc = 0
 
     lrs = [1e-4, 5e-4, 1e-3]
     epochs = [5, 7, 9]
 
+    pretrained_model = None
+    train_dataloader = None
     validation_dataloader = None
     test_dataloader = None
 
     for lr in lrs:
         for epoch in epochs:
+            # delete model, loaders from memory
+            del pretrained_model
+            del train_dataloader
+            del validation_dataloader
+            del test_dataloader
+            gc.collect()
+            
             # load the data and models
             (
                 pretrained_model,
@@ -355,3 +350,22 @@ if __name__ == "__main__":
     # plt.plot(dev_accs)
     # clf = plt.gcf()
     # clf.savefig(f"figures/{args.save_path_dev}")
+
+
+# the entry point of the program
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--experiment", type=str, default=None)
+    parser.add_argument("--small_subset", type=bool, default=False)
+    parser.add_argument("--num_epochs", type=int, default=1)
+    parser.add_argument("--lr", type=float, default=5e-5)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument("--model", type=str, default="distilbert-base-uncased")
+    parser.add_argument("--save_path_train", type=str, default="out_train.png")
+    parser.add_argument("--save_path_dev", type=str, default="out_dev.png")
+
+    args = parser.parse_args()
+    print(f"Specified arguments: {args}")
+
+    main(args)
