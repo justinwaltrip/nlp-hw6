@@ -22,10 +22,9 @@ pip install -r requirements.txt # install Python dependencies
 pip install typing-extensions --upgrade
 
 # runs your code
-# TODO remove small_subset
-srun python classification.py --experiment "BERT-base-uncased" --device cuda --model "BERT-base-uncased" --batch_size "64" --small_subset True
-srun python classification.py --experiment "BERT-large-uncased" --device cuda --model "BERT-large-uncased" --batch_size "6" --small_subset True
-srun python classification.py --experiment "BERT-base-cased" --device cuda --model "BERT-base-cased" --batch_size "64" --small_subset True
-srun python classification.py --experiment "BERT-large-cased" --device cuda --model "BERT-large-cased" --batch_size "6" --small_subset True
-srun python classification.py --experiment "RoBERTa-base" --device cuda --model "RoBERTa-base" --batch_size "64" --small_subset True
-srun python classification.py --experiment "RoBERTa-large" --device cuda --model "RoBERTa-large" --batch_size "6" --small_subset True
+srun python classification.py --experiment "BERT-base-uncased" --device cuda --model "BERT-base-uncased" --batch_size "64" 
+srun python classification.py --experiment "BERT-large-uncased" --device cuda --model "BERT-large-uncased" --batch_size "6"
+srun python classification.py --experiment "BERT-base-cased" --device cuda --model "BERT-base-cased" --batch_size "64" 
+srun python classification.py --experiment "BERT-large-cased" --device cuda --model "BERT-large-cased" --batch_size "6"
+srun python classification.py --experiment "RoBERTa-base" --device cuda --model "RoBERTa-base" --batch_size "64" 
+srun python classification.py --experiment "RoBERTa-large" --device cuda --model "RoBERTa-large" --batch_size "6"
