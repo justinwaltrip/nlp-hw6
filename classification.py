@@ -206,11 +206,11 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
     return train_accs, dev_accs
 
 
-def pre_process(model_name, batch_size, device, small_subset=False):
+def pre_process(model_name, batch_size, device, small_subset=False, seed=20):
     # download dataset
     print("Loading the dataset ...")
     dataset = load_dataset("boolq")
-    dataset = dataset.shuffle()  # shuffle the data
+    dataset = dataset.shuffle(seed=seed)
 
     print("Slicing the data...")
     if small_subset:
