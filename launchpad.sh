@@ -10,7 +10,6 @@
 #SBATCH --time=12:00:00
 #SBATCH --job-name="HW6 CS 601.471/671 homework"
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=0-2
 
 module load anaconda
 
@@ -23,6 +22,4 @@ pip install -r requirements.txt # install Python dependencies
 pip install typing-extensions --upgrade
 
 # runs your code
-models=("distilbert-base-uncased" "BERT-base-uncased" "BERT-base-cased")
-batch_sizes=("64" "32" "32")
-srun python classification.py --experiment ${models[$SLURM_ARRAY_TASK_ID]} --device cuda --model ${models[$SLURM_ARRAY_TASK_ID]} --batch_size ${batch_sizes[$SLURM_ARRAY_TASK_ID]} 
+srun python classification.py --experiment "t5-small" --device cuda --model "t5-small" --batch_size "32" --small_subset True
