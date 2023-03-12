@@ -1,14 +1,18 @@
 import torch
 from torch.utils.data import DataLoader
-from transformers import AutoTokenizer
 from datasets import load_dataset
 import evaluate as evaluate
 from transformers import get_scheduler
 from transformers import AutoModelForSequenceClassification
 import argparse
 import subprocess
-import matplotlib.pyplot as plt
 import gc
+from transformers import T5Tokenizer, T5ForConditionalGeneration
+
+
+id_true = None
+id_false = None
+mytokenizer = None
 
 
 def print_gpu_memory():
@@ -105,9 +109,17 @@ def evaluate_model(model, dataloader, device):
     for batch in dataloader:
         input_ids = batch["input_ids"].to(device)
         attention_mask = batch["attention_mask"].to(device)
-        output = model(input_ids=input_ids, attention_mask=attention_mask)
 
-        predictions = output.logits
+        # create decoder input ids
+        decoder_input_ids = torch.zeros(len(input_ids), 1, dtype=torch.long).to(device)
+
+        output = model(input_ids=input_ids, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids)
+        logits = output[0].squeeze(1)
+
+        # get only logits for true, false
+        selected_logits = logits[:, [id_false, id_true]]
+        predictions = selected_logits.softmax(dim=1)
+
         predictions = torch.argmax(predictions, dim=1)
         dev_accuracy.add_batch(predictions=predictions, references=batch["labels"])
 
@@ -174,8 +186,16 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
 
-            output = mymodel(input_ids=input_ids, attention_mask=attention_mask)
-            predictions = output.logits.cpu()
+            # create decoder input ids
+            decoder_input_ids = torch.zeros(len(input_ids), 1, dtype=torch.long).to(device)
+
+            output = mymodel(input_ids=input_ids, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids)
+            logits = output[0].squeeze(1)
+
+            # get only logits for true, false
+            selected_logits = logits[:, [id_false, id_true]]
+            predictions = selected_logits.softmax(dim=1)
+
             model_loss = loss(predictions, batch["labels"])
 
             model_loss.backward()
@@ -229,8 +249,13 @@ def pre_process(model_name, batch_size, device, small_subset=False):
     # we had to do some pre-processing on the data to figure what is the length of most instances in the dataset
     max_len = 128
 
+    global mytokenizer
     print("Loading the tokenizer...")
-    mytokenizer = AutoTokenizer.from_pretrained(model_name)
+    mytokenizer = T5Tokenizer.from_pretrained(model_name)
+
+    global id_true, id_false
+    id_true = mytokenizer.encode("true")[0]
+    id_false = mytokenizer.encode("false")[0]
 
     print("Loding the data into DS...")
     train_dataset = BoolQADataset(
@@ -262,8 +287,8 @@ def pre_process(model_name, batch_size, device, small_subset=False):
 
     # from Hugging Face (transformers), read their documentation to do this.
     print("Loading the model ...")
-    pretrained_model = AutoModelForSequenceClassification.from_pretrained(
-        model_name, num_labels=2
+    pretrained_model = T5ForConditionalGeneration.from_pretrained(
+        model_name,
     )
 
     print("Moving model to device ..." + str(device))
