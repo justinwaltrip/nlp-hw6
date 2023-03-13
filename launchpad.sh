@@ -22,4 +22,4 @@ pip install -r requirements.txt # install Python dependencies
 pip install typing-extensions --upgrade
 
 # runs your code
-srun python classification.py --experiment "t5-small" --device cuda --model "t5-small" --batch_size "32" --small_subset True
+srun python classification.py --experiment "t5-small" --device cuda --model "t5-small" --batch_size "32" 

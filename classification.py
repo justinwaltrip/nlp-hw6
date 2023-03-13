@@ -3,7 +3,6 @@ from torch.utils.data import DataLoader
 from datasets import load_dataset
 import evaluate as evaluate
 from transformers import get_scheduler
-from transformers import AutoModelForSequenceClassification
 import argparse
 import subprocess
 import gc
@@ -118,7 +117,7 @@ def evaluate_model(model, dataloader, device):
 
         # get only logits for true, false
         selected_logits = logits[:, [id_false, id_true]]
-        predictions = selected_logits.softmax(dim=1)
+        predictions = selected_logits.softmax(dim=1).cpu()
 
         predictions = torch.argmax(predictions, dim=1)
         dev_accuracy.add_batch(predictions=predictions, references=batch["labels"])
@@ -194,7 +193,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
 
             # get only logits for true, false
             selected_logits = logits[:, [id_false, id_true]]
-            predictions = selected_logits.softmax(dim=1)
+            predictions = selected_logits.softmax(dim=1).cpu()
 
             model_loss = loss(predictions, batch["labels"])
 
@@ -251,7 +250,7 @@ def pre_process(model_name, batch_size, device, small_subset=False, seed=20):
 
     global mytokenizer
     print("Loading the tokenizer...")
-    mytokenizer = T5Tokenizer.from_pretrained(model_name)
+    mytokenizer = T5Tokenizer.from_pretrained(model_name, model_max_length=max_len)
 
     global id_true, id_false
     id_true = mytokenizer.encode("true")[0]
@@ -349,7 +348,7 @@ def main(args):
     print(f"Best params: {best_params}")
 
     # load best model
-    pretrained_model = AutoModelForSequenceClassification.from_pretrained("best_model")
+    pretrained_model = T5ForConditionalGeneration.from_pretrained("best_model")
 
     # send model to device
     pretrained_model.to(args.device)
